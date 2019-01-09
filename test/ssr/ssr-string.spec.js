@@ -826,6 +826,22 @@ describe('SSR: renderToString', () => {
     })
   })
 
+  it('should not warn for custom directives that do not have server-side implementation', done => {
+    renderToString(new Vue({
+      directives: {
+        test: {
+          bind() {
+            // noop
+          }
+        }
+      },
+      template: '<div v-test></div>',
+    }), () => {
+      expect('Failed to resolve directive: test').not.toHaveBeenWarned()
+      done()
+    })
+  })
+
   it('_scopeId', done => {
     renderVmWithOptions({
       _scopeId: '_v-parent',
@@ -1076,6 +1092,24 @@ describe('SSR: renderToString', () => {
     })
   })
 
+  // #8977
+  it('should call computed properties with vm as first argument', done => {
+    renderToString(new Vue({
+      data: {
+        firstName: 'Evan',
+        lastName: 'You'
+      },
+      computed: {
+        fullName: ({ firstName, lastName }) => `${firstName} ${lastName}`,
+      },
+      template: '<div>{{ fullName }}</div>',
+    }), (err, result) => {
+      expect(err).toBeNull()
+      expect(result).toContain('<div data-server-rendered="true">Evan You</div>')
+      done()
+    })
+  })
+
   it('return Promise', done => {
     renderToString(new Vue({
       template: `<div>{{ foo }}</div>`,
@@ -1102,7 +1136,7 @@ describe('SSR: renderToString', () => {
   it('should catch template compilation error', done => {
     renderToString(new Vue({
       template: `<div></div><div></div>`
-    }), (err, res) => {
+    }), (err) => {
       expect(err.toString()).toContain('Component template should contain exactly one root element')
       done()
     })
